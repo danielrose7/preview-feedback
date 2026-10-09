@@ -9,11 +9,13 @@ What exists is described in `README.md`. This is what we do next and the ideas b
 - Pins, threads, replies, resolve and reopen, author-only delete, an inbox across pages, deep links,
   scroll-to-pin, and a toolbar that drags anywhere, folds to a bubble and stands up at side edges.
 - The Worker with a Durable Object per site, the admin CLI, and 235 automated checks.
+- goji-sites consumes it through a script tag: `base` has no dependency on this repo's code.
 
 ## Next
 
-1. **Cut goji-sites over.** `Feedback.astro` emits the element and a script tag pointing at the Worker.
-   Delete the copies of the widget and API from goji-sites.
+1. ~~**Cut goji-sites over.**~~ Done: goji-sites `base` 0.15.0 emits `<preview-feedback>` and a script tag
+   pointing at the Worker; its copies of the widget and API are deleted. A site built without feedback
+   config has no trace of the widget (no element, no script, no leftover file).
 2. **Deploy** to workers.dev with a real admin token and the allowed-origin list, then try it on a phone.
 3. **Lit, in steps.** Convert the toolbar, then the inbox rows and thread view, then compose, then the
    root element, keeping `mount()` and `<preview-feedback>` as they are. Done when the 122 browser checks
