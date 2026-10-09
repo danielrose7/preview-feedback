@@ -1,0 +1,28 @@
+{
+  "name": "@preview-feedback/widget",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The <preview-feedback> web component: pins, threads, inbox and a movable toolbar for private previews. No accounts, no extension.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./element": "./src/element.ts",
+    "./anchor": "./src/anchor.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p .",
+    "e2e": "node e2e/run.mjs",
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "happy-dom": "^20.14.5",
+    "playwright-core": "^1.63.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "sideEffects": [
+    "./src/index.ts"
+  ]
+}

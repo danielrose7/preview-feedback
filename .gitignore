@@ -1,0 +1,11 @@
+node_modules/
+.pnpm-store/
+.DS_Store
+.env*
+.dev.vars
+.wrangler/
+# Generated: the built widget the Worker serves at /v1/widget.js
+apps/api/public/v1/
+packages/widget/dist/
+# Scratch output (screenshots from the browser check)
+/.work/

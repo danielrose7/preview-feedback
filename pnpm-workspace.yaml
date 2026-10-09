@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+# esbuild and workerd: postinstall only validates/fetches the platform binary
+allowBuilds:
+  esbuild: true
+  workerd: true

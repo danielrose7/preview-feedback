@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "preview-feedback",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "durable_objects": {
+    "bindings": [{ "name": "FEEDBACK_SITE", "class_name": "FeedbackSite" }]
+  },
+  // The built widget (apps/api/public/v1/widget.js, from `pnpm build`) is served as static assets.
+  "assets": { "directory": "./public" },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["FeedbackSite"] }],
+  "vars": {
+    // Comma-separated origins; `*` matches within one host label or a port. Set the real preview
+    // origins at deploy time. ADMIN_TOKEN is a secret (`wrangler secret put ADMIN_TOKEN`), not a var.
+    "ALLOWED_ORIGINS": "http://localhost:*,http://127.0.0.1:*"
+  }
+}

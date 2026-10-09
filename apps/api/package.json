@@ -1,0 +1,22 @@
+{
+  "name": "@preview-feedback/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The feedback API: a Cloudflare Worker with one SQLite-backed Durable Object per site, plus the admin CLI. Also serves the widget at /v1/widget.js.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "types": "wrangler types",
+    "cli": "node cli.mjs",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.0",
+    "@cloudflare/workers-types": "^5.20261008.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.149.0"
+  }
+}
