@@ -1,3 +1,4 @@
+import { html, LitElement, type PropertyValues } from "lit";
 import { mountInto, type MountOptions } from "./widget";
 
 export const TAG = "preview-feedback";
@@ -7,67 +8,66 @@ export const TAG = "preview-feedback";
  *
  * Everything the widget draws lives in this element's shadow root, so the host page's CSS cannot
  * touch it. Connecting the element mounts the widget; removing it tears every listener, observer and
- * timer down again. Changing an attribute remounts it. Properties set through `config` win over
+ * timer down again. Changing an attribute remounts it (Lit batches several changes into one). Properties set through `config` win over
  * attributes, for pages that build the element in script.
  */
-export class PreviewFeedbackElement extends HTMLElement {
-  static observedAttributes = ["endpoint", "slug", "site-key", "build", "pages"];
+export class PreviewFeedbackElement extends LitElement {
+  static override properties = {
+    endpoint: { type: String },
+    slug: { type: String },
+    siteKey: { type: String, attribute: "site-key" },
+    build: { type: String },
+    pages: { converter: (v: string | null) => parsePages(v) },
+    config: { attribute: false },
+  };
   /** The one mounted widget on the page; a second element is ignored so pins are never drawn twice. */
   private static active: PreviewFeedbackElement | null = null;
 
+  endpoint?: string;
+  slug?: string;
+  siteKey?: string;
+  build?: string;
+  pages?: string[];
+  /** Set through script; wins over the attributes. */
+  config: Partial<MountOptions> = {};
+
   private destroy: (() => void) | null = null;
-  private props: Partial<MountOptions> = {};
-  private queued = false;
 
-  set config(v: Partial<MountOptions>) {
-    this.props = v;
-    this.queue();
-  }
-  get config(): Partial<MountOptions> {
-    return this.props;
+  // The widget draws into this one container, inside the shadow root Lit provides.
+  protected override render() {
+    return html`<div id="fb"></div>`;
   }
 
-  connectedCallback(): void {
-    this.queue();
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate(); // re-attached: mount again
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
     this.teardown();
   }
 
-  attributeChangedCallback(): void {
-    this.queue();
-  }
-
-  /** Several attributes can change in one tick (and on upgrade); mount once after all of them. */
-  private queue(): void {
-    if (this.queued) return;
-    this.queued = true;
-    queueMicrotask(() => {
-      this.queued = false;
-      if (this.isConnected) this.remount();
-    });
+  /** Attributes can change together (and on upgrade); Lit batches them, so this mounts once. */
+  protected override updated(changed: PropertyValues): void {
+    if (changed.size || !this.destroy) this.remount();
   }
 
   private options(): MountOptions | null {
-    const endpoint = this.props.endpoint ?? this.getAttribute("endpoint");
-    const slug = this.props.slug ?? this.getAttribute("slug");
-    const siteKey = this.props.siteKey ?? this.getAttribute("site-key");
+    const c = this.config ?? {};
+    const endpoint = c.endpoint ?? this.endpoint;
+    const slug = c.slug ?? this.slug;
+    const siteKey = c.siteKey ?? this.siteKey;
     if (!endpoint || !slug || !siteKey) {
       console.warn(`<${TAG}> needs endpoint, slug and site-key; nothing was mounted.`);
       return null;
     }
-    return {
-      endpoint,
-      slug,
-      siteKey,
-      build: this.props.build ?? this.getAttribute("build") ?? undefined,
-      pages: this.props.pages ?? parsePages(this.getAttribute("pages")),
-    };
+    return { endpoint, slug, siteKey, build: c.build ?? this.build, pages: c.pages ?? this.pages };
   }
 
   private remount(): void {
     this.teardown();
+    if (!this.isConnected) return;
     const opts = this.options();
     if (!opts) return;
     const other = PreviewFeedbackElement.active;
@@ -75,8 +75,10 @@ export class PreviewFeedbackElement extends HTMLElement {
       console.warn(`<${TAG}> is already on this page; the second one is ignored.`);
       return;
     }
+    const container = this.renderRoot.querySelector<HTMLElement>("#fb");
+    if (!container) return;
     PreviewFeedbackElement.active = this;
-    this.destroy = mountInto(this, opts);
+    this.destroy = mountInto(this, opts, container);
   }
 
   private teardown(): void {

@@ -1,3 +1,6 @@
+import { html, nothing, render as litRender, type TemplateResult } from "lit";
+import { live } from "lit/directives/live.js";
+import { unsafeSVG } from "lit/directives/unsafe-svg.js";
 import { anchorFor, findAnchor, sectionLabel, type Anchor } from "./anchor";
 import { FeedbackApi, type Comment, type NewComment } from "./api";
 import { chooseVertical, locatePin, nudgePins, numberPins, placePopover, rotatePos, scrollDeltaFor, toolbarFractions, toolbarPos, type Located, type Pt } from "./layout";
@@ -36,10 +39,9 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string,
   return e;
 }
 
-function button(label: string, cls: string, onClick: () => void, attrs: Record<string, string> = {}): HTMLButtonElement {
-  const b = el("button", { type: "button", class: cls, ...attrs }, label);
-  b.addEventListener("click", onClick);
-  return b;
+/** A text button. `label` sets an aria-label for glyph-only text such as "×". */
+function btn(text: string, cls: string, onClick: () => void, extra: { label?: string; disabled?: boolean } = {}): TemplateResult {
+  return html`<button type="button" class=${cls} aria-label=${extra.label ?? nothing} ?disabled=${extra.disabled ?? false} @click=${onClick}>${text}</button>`;
 }
 
 const ICONS = {
@@ -57,16 +59,13 @@ const ICONS = {
   eyeOff: '<path d="M3 3l18 18M10.6 6.1A9.8 9.8 0 0112 6c6 0 10 6 10 6a17 17 0 01-3.2 3.8M6.5 7.6A17 17 0 002 12s4 7 10 7a9.6 9.6 0 004-.9"/>',
 } as const;
 
-function svg(icon: keyof typeof ICONS, size = 18): string {
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[icon]}</svg>`;
+function svg(icon: keyof typeof ICONS, size = 18): TemplateResult {
+  return html`<svg viewBox="0 0 24 24" width=${size} height=${size} fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${unsafeSVG(ICONS[icon])}</svg>`;
 }
 
 /** A small icon-only button. The label doubles as the tooltip and the accessible name. */
-function iconBtn(icon: keyof typeof ICONS, label: string, onClick: () => void, cls = ""): HTMLButtonElement {
-  const b = el("button", { type: "button", class: `icon ${cls}`.trim(), "aria-label": label, title: label });
-  b.innerHTML = svg(icon);
-  b.addEventListener("click", (e) => { e.stopPropagation(); onClick(); });
-  return b;
+function iconBtn(icon: keyof typeof ICONS, label: string, onClick: () => void, cls = ""): TemplateResult {
+  return html`<button type="button" class=${`icon ${cls}`.trim()} aria-label=${label} title=${label} @click=${(e: Event) => { e.stopPropagation(); onClick(); }}>${svg(icon)}</button>`;
 }
 
 function ago(iso: string): string {
@@ -96,7 +95,7 @@ function snippet(s: string, n = 90): string {
  * that tears it all down: every listener, observer and timer registered on the document or window is
  * removed, so removing the element from a page leaves nothing behind.
  */
-export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
+export function mountInto(host: HTMLElement, opts: MountOptions, container?: HTMLElement): () => void {
   const api = new FeedbackApi(opts);
   let destroyed = false;
   const cleanups: (() => void)[] = [];
@@ -130,24 +129,15 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
   const drafts = { compose: "", resolveNote: "", replies: new Map<number, string>() };
 
   // ---- shell ------------------------------------------------------------------------------
-  const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
+  const root: ParentNode & { replaceChildren(...n: (Node | string)[]): void } = container ?? host.shadowRoot ?? host.attachShadow({ mode: "open" });
   root.replaceChildren(el("style", {}, CSS)); // a re-mount starts from a clean shadow root
 
   const pinsLayer = el("div", { class: "pins" });
   const panel = el("section", { class: "panel", role: "dialog", "aria-label": "Feedback", hidden: "" });
   const hl = el("div", { class: "hl", hidden: "" });
-  const bar = el("div", { class: "bar", hidden: "", role: "status" }, "Click where you want to comment. ");
-  bar.append(button("Cancel", "ghost", () => { stopPlacing(); render(); }));
-
-  const tbGrip = el("button", { type: "button", class: "tb tb-grip", "aria-label": "Move toolbar. Drag, or use the arrow keys.", title: "Drag to move" });
-  const tbComment = el("button", { type: "button", class: "tb", "aria-pressed": "false" });
-  const tbInbox = el("button", { type: "button", class: "tb tb-inbox", "aria-expanded": "false" });
-  const tbFilter = el("button", { type: "button", class: "tb tb-filter" });
-  const tbHide = el("button", { type: "button", class: "tb tb-hide" });
-  const tbMin = el("button", { type: "button", class: "tb tb-min", "aria-label": "Minimize toolbar", title: "Minimize" });
-  const bubble = el("button", { type: "button", class: "bubble", "aria-label": "Open feedback toolbar. Drag, or use the arrow keys, to move it." });
-  const sep = () => el("span", { class: "sep" });
-  const toolbar = el("div", { class: "toolbar", role: "toolbar", "aria-label": "Feedback tools" }, tbGrip, tbComment, sep(), tbInbox, sep(), tbFilter, sep(), tbHide, sep(), tbMin, bubble);
+  const bar = el("div", { class: "bar", hidden: "", role: "status" });
+  litRender(html`Click where you want to comment. ${btn("Cancel", "ghost", () => { stopPlacing(); render(); })}`, bar);
+  const toolbar = el("div", { class: "toolbar", role: "toolbar", "aria-label": "Feedback tools" });
   root.append(pinsLayer, panel, hl, bar, toolbar);
 
   const persist = () => saveUi(ui);
@@ -471,14 +461,10 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
   }
 
   // ---- views -------------------------------------------------------------------------------
-  function nameRow(): HTMLElement {
+  function nameRow(): TemplateResult {
     if (!name || editingName) {
-      const input = el("input", { type: "text", maxlength: "80", autocomplete: "name", placeholder: "Your name", "aria-label": "Your name" });
-      input.value = nameDraft || name;
-      // Keep what was typed across the re-renders that background refreshes cause.
-      input.addEventListener("input", () => (nameDraft = input.value));
       const save = () => {
-        const v = input.value.trim();
+        const v = (nameDraft || name).trim();
         if (!v) return;
         name = v;
         nameDraft = "";
@@ -487,10 +473,15 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
         notice = "";
         render();
       };
-      input.addEventListener("keydown", (e) => e.key === "Enter" && (e.preventDefault(), save()));
-      return el("div", { class: "namerow" }, input, button("Save", "ghost small", save));
+      return html`<div class="namerow">
+        <input type="text" maxlength="80" autocomplete="name" placeholder="Your name" aria-label="Your name"
+          .value=${live(nameDraft || name)}
+          @input=${(e: Event) => (nameDraft = (e.target as HTMLInputElement).value)}
+          @keydown=${(e: KeyboardEvent) => { if (e.key === "Enter") { e.preventDefault(); save(); } }} />
+        ${btn("Save", "ghost small", save)}
+      </div>`;
     }
-    return el("p", { class: "who" }, `Posting as ${name} · `, button("change", "link", () => { editingName = true; render(); }));
+    return html`<p class="who">Posting as ${name} · ${btn("change", "link", () => { editingName = true; render(); })}</p>`;
   }
 
   /** What to say when a comment on this page cannot be shown as a pin. */
@@ -500,7 +491,9 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
     return r === "missing" ? "this spot has changed" : r === "hidden" ? "not visible at this width" : "";
   }
 
-  function row(t: Thread): HTMLElement {
+  const reopen = (id: number) => { if (!needName()) void act(async () => { await api.reopen(id, name); }); };
+
+  function row(t: Thread): TemplateResult {
     const r = t.root;
     const where = sectionLabel(r.anchor_id);
     const bp = breakpoint(r.viewport_w);
@@ -508,177 +501,165 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
     const meta = [r.author, ago(r.created_at), where, bp].filter(Boolean).join(" · ");
     const sub = [r.status === "resolved" ? `Resolved${r.resolved_by ? ` by ${r.resolved_by}` : ""}` : "", t.replies.length ? `${t.replies.length} repl${t.replies.length === 1 ? "y" : "ies"}` : "", note].filter(Boolean).join(" · ");
     const n = r.page === page ? nums.get(r.id) : undefined;
-    const b = el("button", { type: "button", class: "row-btn" },
-      el("span", { class: "meta" }, meta),
-      el("span", { class: "snip" }, snippet(r.body)),
-      sub && el("span", { class: "sub" }, sub),
-    );
-    b.addEventListener("click", () => openThread(t));
     const resolved = r.status === "resolved";
-    const actions: HTMLElement[] = [];
+    const actions: TemplateResult[] = [];
     if (confirmingRowDelete === r.id) {
-      actions.push(
-        el("span", { class: "confirm" }, "Delete?",
-          button("Yes", "danger small", () => { void act(async () => { await api.remove(r.id, name); }).then(() => { confirmingRowDelete = null; render(); }); }),
-          button("No", "ghost small", () => { confirmingRowDelete = null; render(); })),
-      );
+      actions.push(html`<span class="confirm">Delete?
+        ${btn("Yes", "danger small", () => { void act(async () => { await api.remove(r.id, name); }).then(() => { confirmingRowDelete = null; render(); }); })}
+        ${btn("No", "ghost small", () => { confirmingRowDelete = null; render(); })}</span>`);
     } else {
       actions.push(resolved
-        ? iconBtn("undo", "Reopen", () => { if (!needName()) void act(async () => { await api.reopen(r.id, name); }); })
+        ? iconBtn("undo", "Reopen", () => reopen(r.id))
         : iconBtn("check", "Resolve", () => { if (!needName()) void act(async () => { await api.resolve(r.id, name, null); }); }, "ok"));
       if (name && canDelete(t, name)) actions.push(iconBtn("trash", "Delete thread", () => { confirmingRowDelete = r.id; render(); }, "bad"));
     }
-    return el("li", { class: `item${resolved ? " is-resolved" : ""}` },
-      el("span", { class: `num${n ? "" : " none"}`, "aria-hidden": "true" }, n ? String(n) : ""),
-      b, el("div", { class: "acts" }, ...actions));
+    return html`<li class=${`item${resolved ? " is-resolved" : ""}`}>
+      <span class=${`num${n ? "" : " none"}`} aria-hidden="true">${n ? String(n) : ""}</span>
+      <button type="button" class="row-btn" @click=${() => openThread(t)}>
+        <span class="meta">${meta}</span>
+        <span class="snip">${snippet(r.body)}</span>
+        ${sub ? html`<span class="sub">${sub}</span>` : nothing}
+      </button>
+      <div class="acts">${actions}</div>
+    </li>`;
   }
 
-  function listView(): Node[] {
+  function listView(): TemplateResult[] {
     const openHere = openCount(here());
     const openAll = openCount(threads);
-    const tabs = el("div", { class: "tabs", role: "tablist" },
-      ...(["page", "all"] as const).map((k) => {
-        const b = el("button", { type: "button", role: "tab", "aria-selected": String(ui.tab === k), class: "tab" }, k === "page" ? `This page (${openHere})` : `All pages (${openAll})`);
-        b.addEventListener("click", () => { ui = { ...ui, tab: k }; persist(); render(); });
-        return b;
-      }));
-    const filter = el("div", { class: "seg" },
-      ...(["open", "resolved"] as const).map((k) => {
+    const tabs = html`<div class="tabs" role="tablist">
+      ${(["page", "all"] as const).map((k) => html`<button type="button" role="tab" class="tab" aria-selected=${String(ui.tab === k)}
+        @click=${() => { ui = { ...ui, tab: k }; persist(); render(); }}>${k === "page" ? `This page (${openHere})` : `All pages (${openAll})`}</button>`)}
+    </div>`;
+    const filter = html`<div class="seg">
+      ${(["open", "resolved"] as const).map((k) => {
         const n = threads.filter((t) => (ui.tab === "page" ? t.root.page === page : true) && t.root.status === k).length;
-        const b = el("button", { type: "button", "aria-pressed": String(ui.filter === k) }, `${k === "open" ? "Open" : "Resolved"} (${n})`);
-        b.addEventListener("click", () => { ui = { ...ui, filter: k }; persist(); render(); schedule(); });
-        return b;
-      }));
+        return html`<button type="button" aria-pressed=${String(ui.filter === k)}
+          @click=${() => { ui = { ...ui, filter: k }; persist(); render(); schedule(); }}>${k === "open" ? "Open" : "Resolved"} (${n})</button>`;
+      })}
+    </div>`;
 
     const shown = (ui.tab === "page" ? here() : threads).filter((t) => t.root.status === ui.filter);
-    let body: Node;
-    if (!loaded) body = el("p", { class: "empty" }, "Loading…");
-    else if (loadError) body = el("p", { class: "err" }, loadError);
-    else if (!shown.length) body = el("p", { class: "empty" }, `No ${ui.filter} comments${ui.tab === "page" ? " on this page" : ""} yet.`);
-    else if (ui.tab === "page") body = el("ul", { class: "list", "aria-live": "polite" }, ...shown.map(row));
+    let body: TemplateResult;
+    if (!loaded) body = html`<p class="empty">Loading…</p>`;
+    else if (loadError) body = html`<p class="err">${loadError}</p>`;
+    else if (!shown.length) body = html`<p class="empty">No ${ui.filter} comments${ui.tab === "page" ? " on this page" : ""} yet.</p>`;
+    else if (ui.tab === "page") body = html`<ul class="list" aria-live="polite">${shown.map(row)}</ul>`;
     else {
-      body = el("div", {}, ...groupByPage(shown, opts.pages).map((g) =>
-        el("section", { class: "group" },
-          el("h3", {}, pageName(g), g.page === page && el("span", { class: "here" }, "this page")),
-          el("ul", { class: "list" }, ...g.threads.map(row)))));
+      body = html`<div>${groupByPage(shown, opts.pages).map((g) => html`<section class="group">
+        <h3>${pageName(g)}${g.page === page ? html`<span class="here">this page</span>` : nothing}</h3>
+        <ul class="list">${g.threads.map(row)}</ul></section>`)}</div>`;
     }
-    return [tabs, filter, ...(editingName || (!name && notice) ? [nameRow()] : []), body,
-      button("Page comment", "ghost block", () => { anchor = null; pendingPt = null; focusTextarea = true; go("compose"); })];
+    return [tabs, filter, editingName || (!name && notice) ? nameRow() : html``, body,
+      btn("Page comment", "ghost block", () => { anchor = null; pendingPt = null; focusTextarea = true; go("compose"); })];
   }
 
-  function messageEl(m: Comment, isRoot: boolean): HTMLElement {
-    return el("div", { class: `msg${isRoot ? " root" : ""}` },
-      el("div", { class: "meta" }, el("strong", {}, m.author), ` · ${ago(m.created_at)}`),
-      el("p", {}, m.body));
+  function messageEl(m: Comment, isRoot: boolean): TemplateResult {
+    return html`<div class=${`msg${isRoot ? " root" : ""}`}>
+      <div class="meta"><strong>${m.author}</strong> · ${ago(m.created_at)}</div>
+      <p>${m.body}</p></div>`;
   }
 
-  function threadView(): Node[] {
+  function threadView(): TemplateResult[] {
     const t = thread(ui.threadId);
-    if (!t) return [el("p", { class: "empty" }, loaded ? "This thread is no longer there." : "Loading…"), button("Back", "ghost", () => go("list"))];
+    if (!t) return [html`<p class="empty">${loaded ? "This thread is no longer there." : "Loading…"}</p>`, btn("Back", "ghost", () => go("list"))];
     const r = t.root;
     const resolved = r.status === "resolved";
     const where = sectionLabel(r.anchor_id);
     const bp = breakpoint(r.viewport_w);
-    const parts: Node[] = [];
-
-    const head: HTMLElement[] = [];
-    if (r.anchor_id || r.anchor_text) head.push(iconBtn("target", "Show on page", () => { if (r.page === page) reveal(t); else openThread(t); }));
-    head.push(resolved
-      ? iconBtn("undo", "Reopen", () => { if (!needName()) void act(async () => { await api.reopen(r.id, name); }); })
-      : iconBtn("check", "Resolve", () => { resolving = true; render(); }, "ok"));
-    if (name && canDelete(t, name)) head.push(iconBtn("trash", "Delete thread", () => { confirmingDelete = true; render(); }, "bad"));
-    parts.push(el("div", { class: "thead" },
-      el("p", { class: "where" }, [pageName({ page: r.page, title: r.page_title }), where, bp && `written on ${bp}`].filter(Boolean).join(" · ")),
-      el("div", { class: "acts" }, ...head)));
-
     const note = spotNote(t);
-    if (note === "this spot has changed") parts.push(el("p", { class: "warn" }, "This spot on the page has changed, so it can't be pinned."));
-    else if (note) parts.push(el("p", { class: "warn" }, "This spot isn't visible at this screen width, so it has no pin here."));
-
-    parts.push(el("div", { class: "msgs" }, ...messages(t).map((m, i) => messageEl(m, i === 0))));
-
-    if (resolved) {
-      parts.push(el("p", { class: "status ok" }, `Resolved${r.resolved_by ? ` by ${r.resolved_by}` : ""}${r.resolved_at ? ` · ${ago(r.resolved_at)}` : ""}${r.resolution_note ? `: ${r.resolution_note}` : ""}`));
-    } else if (r.reopened_by) {
-      parts.push(el("p", { class: "status" }, `Reopened by ${r.reopened_by}${r.reopened_at ? ` · ${ago(r.reopened_at)}` : ""}`));
-    }
-
-    parts.push(nameRow());
-
-    if (resolved) {
-      parts.push(el("p", { class: "note" }, "This thread is resolved. Reopen it to reply."));
-      parts.push(button("Reopen", "primary block", () => { if (!needName()) void act(async () => { await api.reopen(r.id, name); }); }, busy ? { disabled: "" } : {}));
-    } else {
-      const ta = el("textarea", { rows: "3", maxlength: "2000", placeholder: "Reply…", "aria-label": "Reply" });
-      ta.value = drafts.replies.get(r.id) ?? "";
-      ta.addEventListener("input", () => drafts.replies.set(r.id, ta.value));
-      const send = el("button", { type: "button", class: "primary", ...(busy ? { disabled: "" } : {}) }, busy ? "Sending…" : "Reply");
-      send.addEventListener("click", () => {
-        const v = ta.value.trim();
-        if (!v) { notice = "Please write a reply."; render(); return; }
-        void sendReply(t, v);
-      });
-      parts.push(ta, el("div", { class: "row end" }, send));
-      if (resolving) {
-        const noteIn = el("input", { type: "text", maxlength: "500", placeholder: "Note (optional), e.g. what changed", "aria-label": "Resolution note" });
-        noteIn.value = drafts.resolveNote;
-        noteIn.addEventListener("input", () => (drafts.resolveNote = noteIn.value));
-        parts.push(el("div", { class: "inline" }, noteIn,
-          el("div", { class: "row" },
-            button("Cancel", "ghost small", () => { resolving = false; render(); }),
-            button("Resolve thread", "primary small", () => {
-              if (needName()) return;
-              void act(async () => { await api.resolve(r.id, name, drafts.resolveNote.trim() || null); }).then((ok) => {
-                if (ok) { resolving = false; drafts.resolveNote = ""; render(); }
-              });
-            }))));
-      }
-    }
-
-    if (name && canDelete(t, name) && confirmingDelete) {
-      parts.push(el("div", { class: "inline" }, el("p", { class: "note" }, "Delete this thread for everyone? This can't be undone."), el("div", { class: "row" },
-        button("Keep", "ghost small", () => { confirmingDelete = false; render(); }),
-        button("Delete", "danger small", () => { void act(async () => { await api.remove(r.id, name); }).then((ok) => { if (ok) go("list"); }); }))));
-    }
-    return parts;
+    const mine = Boolean(name && canDelete(t, name));
+    const send = () => {
+      const v = (drafts.replies.get(r.id) ?? "").trim();
+      if (!v) { notice = "Please write a reply."; render(); return; }
+      void sendReply(t, v);
+    };
+    return [
+      html`<div class="thead">
+        <p class="where">${[pageName({ page: r.page, title: r.page_title }), where, bp && `written on ${bp}`].filter(Boolean).join(" · ")}</p>
+        <div class="acts">
+          ${r.anchor_id || r.anchor_text ? iconBtn("target", "Show on page", () => { if (r.page === page) reveal(t); else openThread(t); }) : nothing}
+          ${resolved ? iconBtn("undo", "Reopen", () => reopen(r.id)) : iconBtn("check", "Resolve", () => { resolving = true; render(); }, "ok")}
+          ${mine ? iconBtn("trash", "Delete thread", () => { confirmingDelete = true; render(); }, "bad") : nothing}
+        </div>
+      </div>`,
+      note === "this spot has changed" ? html`<p class="warn">This spot on the page has changed, so it can't be pinned.</p>`
+        : note ? html`<p class="warn">This spot isn't visible at this screen width, so it has no pin here.</p>` : html``,
+      html`<div class="msgs">${messages(t).map((m, i) => messageEl(m, i === 0))}</div>`,
+      resolved
+        ? html`<p class="status ok">Resolved${r.resolved_by ? ` by ${r.resolved_by}` : ""}${r.resolved_at ? ` · ${ago(r.resolved_at)}` : ""}${r.resolution_note ? `: ${r.resolution_note}` : ""}</p>`
+        : r.reopened_by ? html`<p class="status">Reopened by ${r.reopened_by}${r.reopened_at ? ` · ${ago(r.reopened_at)}` : ""}</p>` : html``,
+      nameRow(),
+      resolved
+        ? html`<p class="note">This thread is resolved. Reopen it to reply.</p>${btn("Reopen", "primary block", () => reopen(r.id), { disabled: busy })}`
+        : html`<textarea rows="3" maxlength="2000" placeholder="Reply…" aria-label="Reply"
+            .value=${live(drafts.replies.get(r.id) ?? "")}
+            @input=${(e: Event) => drafts.replies.set(r.id, (e.target as HTMLTextAreaElement).value)}></textarea>
+          <div class="row end">${btn(busy ? "Sending…" : "Reply", "primary", send, { disabled: busy })}</div>
+          ${resolving ? html`<div class="inline">
+            <input type="text" maxlength="500" placeholder="Note (optional), e.g. what changed" aria-label="Resolution note"
+              .value=${live(drafts.resolveNote)} @input=${(e: Event) => (drafts.resolveNote = (e.target as HTMLInputElement).value)} />
+            <div class="row">
+              ${btn("Cancel", "ghost small", () => { resolving = false; render(); })}
+              ${btn("Resolve thread", "primary small", () => {
+                if (needName()) return;
+                void act(async () => { await api.resolve(r.id, name, drafts.resolveNote.trim() || null); }).then((ok) => {
+                  if (ok) { resolving = false; drafts.resolveNote = ""; render(); }
+                });
+              })}
+            </div></div>` : nothing}`,
+      mine && confirmingDelete
+        ? html`<div class="inline"><p class="note">Delete this thread for everyone? This can't be undone.</p><div class="row">
+            ${btn("Keep", "ghost small", () => { confirmingDelete = false; render(); })}
+            ${btn("Delete", "danger small", () => { void act(async () => { await api.remove(r.id, name); }).then((ok) => { if (ok) go("list"); }); })}
+          </div></div>` : html``,
+    ];
   }
 
-  function composeView(): Node[] {
-    const ta = el("textarea", { rows: "5", maxlength: "2000", placeholder: anchor ? "What would you change, or what do you like here?" : "Your comment about this page", "aria-label": "Your comment" });
-    ta.value = drafts.compose;
-    ta.addEventListener("input", () => (drafts.compose = ta.value));
-    const chip = anchor ? el("div", { class: "chip" },
-      el("span", {}, `Pinned to ${sectionLabel(anchor.anchor_id) ?? "the page"}${anchor.anchor_text ? ` · “${anchor.anchor_text.slice(0, 40)}”` : ""}`),
-      button("×", "link", () => { anchor = null; pendingPt = null; render(); schedule(); }, { "aria-label": "Remove pin" })) : null;
-    const send = el("button", { type: "button", class: "primary", ...(busy ? { disabled: "" } : {}) }, busy ? "Sending…" : "Send");
-    send.addEventListener("click", () => {
-      const v = ta.value.trim();
+  function composeView(): TemplateResult[] {
+    const send = () => {
+      const v = drafts.compose.trim();
       if (!v) { notice = "Please write a comment."; render(); return; }
       void sendNew(v);
-    });
-    return [nameRow(), chip, ta, el("div", { class: "row end" }, button("Cancel", "ghost", () => go("list")), send)].filter(Boolean) as Node[];
+    };
+    return [
+      nameRow(),
+      anchor ? html`<div class="chip"><span>Pinned to ${sectionLabel(anchor.anchor_id) ?? "the page"}${anchor.anchor_text ? ` · “${anchor.anchor_text.slice(0, 40)}”` : ""}</span>
+        ${btn("×", "link", () => { anchor = null; pendingPt = null; render(); schedule(); }, { label: "Remove pin" })}</div>` : html``,
+      html`<textarea rows="5" maxlength="2000" aria-label="Your comment"
+        placeholder=${anchor ? "What would you change, or what do you like here?" : "Your comment about this page"}
+        .value=${live(drafts.compose)} @input=${(e: Event) => (drafts.compose = (e.target as HTMLTextAreaElement).value)}></textarea>`,
+      html`<div class="row end">${btn("Cancel", "ghost", () => go("list"))}${btn(busy ? "Sending…" : "Send", "primary", send, { disabled: busy })}</div>`,
+    ];
   }
 
   // ---- render ------------------------------------------------------------------------------
   function renderToolbar(): void {
     const open = openCount(threads);
-    tbComment.innerHTML = `${svg("comment")}<span class="lbl">Comment</span>`;
-    tbComment.setAttribute("aria-pressed", String(placing));
-    tbComment.setAttribute("aria-label", "Add a comment");
-    tbComment.classList.toggle("on", placing);
-    tbInbox.innerHTML = `${svg("inbox")}<span class="lbl">Inbox</span><span class="cnt">${open}</span>`;
-    tbInbox.setAttribute("aria-expanded", String(ui.open));
-    tbInbox.setAttribute("aria-label", `Inbox, ${open} open`);
-    tbInbox.classList.toggle("on", ui.open);
-    tbFilter.innerHTML = `<span class="ftxt">${ui.filter === "open" ? "Open" : "Resolved"}</span><span class="ficon">${svg(ui.filter === "open" ? "circle" : "circleCheck", 20)}</span>`;
-    tbFilter.title = ui.filter === "open" ? "Showing open comments" : "Showing resolved comments";
-    tbFilter.setAttribute("aria-label", `Showing ${ui.filter} comments. Switch to ${ui.filter === "open" ? "resolved" : "open"}.`);
-    tbHide.innerHTML = svg(ui.hidden ? "eyeOff" : "eye");
-    tbHide.setAttribute("aria-label", ui.hidden ? "Show comment pins" : "Hide comment pins");
-    tbHide.setAttribute("aria-pressed", String(ui.hidden));
-    tbGrip.innerHTML = svg("grip");
-    tbMin.innerHTML = svg("minimize");
-    bubble.innerHTML = `${svg("comment", 22)}${open ? `<span class="bcnt">${open}</span>` : ""}`;
+    const f = ui.filter;
+    litRender(html`
+      <button type="button" class="tb tb-grip" aria-label="Move toolbar. Drag, or use the arrow keys." title="Drag to move" v-drag>${svg("grip")}</button>
+      <button type="button" class=${`tb${placing ? " on" : ""}`} aria-pressed=${String(placing)} aria-label="Add a comment"
+        @click=${() => (placing ? (stopPlacing(), render()) : startPlacing())}>${svg("comment")}<span class="lbl">Comment</span></button>
+      <span class="sep"></span>
+      <button type="button" class=${`tb tb-inbox${ui.open ? " on" : ""}`} aria-expanded=${String(ui.open)} aria-label=${`Inbox, ${open} open`}
+        @click=${() => {
+          if (ui.open && ui.view === "list") setOpen(false);
+          else { ui = { ...ui, open: true, view: "list", threadId: null }; go("list"); void refresh().then(render); }
+        }}>${svg("inbox")}<span class="lbl">Inbox</span><span class="cnt">${open}</span></button>
+      <span class="sep"></span>
+      <button type="button" class="tb tb-filter" title=${f === "open" ? "Showing open comments" : "Showing resolved comments"}
+        aria-label=${`Showing ${f} comments. Switch to ${f === "open" ? "resolved" : "open"}.`}
+        @click=${() => { ui = { ...ui, filter: f === "open" ? "resolved" : "open" }; persist(); render(); }}>
+        <span class="ftxt">${f === "open" ? "Open" : "Resolved"}</span><span class="ficon">${svg(f === "open" ? "circle" : "circleCheck", 20)}</span></button>
+      <span class="sep"></span>
+      <button type="button" class="tb tb-hide" aria-label=${ui.hidden ? "Show comment pins" : "Hide comment pins"} aria-pressed=${String(ui.hidden)}
+        @click=${() => { ui = { ...ui, hidden: !ui.hidden }; persist(); render(); }}>${svg(ui.hidden ? "eyeOff" : "eye")}</button>
+      <span class="sep"></span>
+      <button type="button" class="tb tb-min" aria-label="Minimize toolbar" title="Minimize" @click=${() => setCollapsed(true)}>${svg("minimize")}</button>
+      <button type="button" class="bubble" aria-label="Open feedback toolbar. Drag, or use the arrow keys, to move it." v-drag
+        @click=${() => { if (!suppressClick) setCollapsed(false); }}>${svg("comment", 22)}${open ? html`<span class="bcnt">${open}</span>` : nothing}</button>`, toolbar);
+    for (const h of toolbar.querySelectorAll<HTMLElement>("[v-drag]")) wireDrag(h);
     toolbar.classList.toggle("collapsed", tb.collapsed);
     toolbar.classList.toggle("vertical", tb.vertical && !tb.collapsed);
     placeToolbar();
@@ -733,7 +714,10 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
 
   let drag: { id: number; sx: number; sy: number; left: number; top: number; moved: boolean } | null = null;
   let suppressClick = false;
+  const wired = new WeakSet<HTMLElement>(); // Lit keeps these buttons between renders, so wire each once
   function wireDrag(handle: HTMLElement): void {
+    if (wired.has(handle)) return;
+    wired.add(handle);
     handle.style.touchAction = "none"; // so a touch drag moves the toolbar instead of scrolling the page
     handle.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
@@ -774,11 +758,6 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
       settleOrientation();
     });
   }
-  wireDrag(tbGrip);
-  wireDrag(bubble);
-  bubble.addEventListener("click", () => { if (!suppressClick) setCollapsed(false); });
-  tbMin.addEventListener("click", () => setCollapsed(true));
-
   function render(): void {
     if (destroyed) return;
     locateAll();
@@ -787,47 +766,26 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
     if (panel.hidden) { schedule(); return; }
 
     const titles = { list: "Inbox", thread: "Thread", compose: "New comment" };
-    const head = el("header", {},
-      ui.view !== "list" ? button("←", "link back", () => go("list"), { "aria-label": "Back to inbox" }) : null,
-      el("h2", {}, titles[ui.view]),
-      button("×", "link x", () => setOpen(false), { "aria-label": "Close" }),
-    );
     const body = ui.view === "list" ? listView() : ui.view === "thread" ? threadView() : composeView();
-    // Keep the scroll position and focus across re-renders caused by an action.
-    const top = panel.scrollTop;
-    const focusedTag = root.activeElement?.tagName;
-    const focusedPos = (root.activeElement as HTMLInputElement | HTMLTextAreaElement | null)?.selectionStart ?? null;
-    panel.replaceChildren(head, ...(notice ? [el("p", { class: "err", role: "alert" }, notice)] : []), ...body);
-    panel.scrollTop = top;
-    if (focusedTag === "INPUT") {
-      const inp = panel.querySelector<HTMLInputElement>(".namerow input, .inline input");
-      inp?.focus();
-      if (inp && focusedPos !== null) inp.setSelectionRange(focusedPos, focusedPos);
-    }
-    if (focusedTag === "TEXTAREA" || focusTextarea) {
-      const ta = panel.querySelector("textarea");
-      ta?.focus();
-      if (ta && focusedPos !== null && focusedTag === "TEXTAREA") ta.setSelectionRange(focusedPos, focusedPos);
+    litRender(html`<header>
+      ${ui.view !== "list" ? btn("←", "link back", () => go("list"), { label: "Back to inbox" }) : nothing}
+      <h2>${titles[ui.view]}</h2>
+      ${btn("×", "link x", () => setOpen(false), { label: "Close" })}
+    </header>${notice ? html`<p class="err" role="alert">${notice}</p>` : nothing}${body}`, panel);
+    if (focusTextarea) {
+      panel.querySelector("textarea")?.focus(); // Lit keeps focus and scroll on its own otherwise
       focusTextarea = false;
     }
     placePanel(); // now, not next frame, so the popover never flashes at its default spot
     schedule();
   }
 
-  tbComment.addEventListener("click", () => (placing ? (stopPlacing(), render()) : startPlacing()));
-  tbInbox.addEventListener("click", () => {
-    if (ui.open && ui.view === "list") setOpen(false);
-    else { ui = { ...ui, open: true, view: "list", threadId: null }; go("list"); void refresh().then(render); }
-  });
-  tbFilter.addEventListener("click", () => { ui = { ...ui, filter: ui.filter === "open" ? "resolved" : "open" }; persist(); render(); });
-  tbHide.addEventListener("click", () => { ui = { ...ui, hidden: !ui.hidden }; persist(); render(); });
-
   // Hidden while the preview passphrase gate is up (it sets html.gated until unlocked).
-  const html = document.documentElement;
-  const syncGate = () => { host.hidden = html.classList.contains("gated"); schedule(); };
+  const docEl = document.documentElement;
+  const syncGate = () => { host.hidden = docEl.classList.contains("gated"); schedule(); };
   syncGate();
   const gateObserver = new MutationObserver(syncGate);
-  gateObserver.observe(html, { attributes: true, attributeFilter: ["class"] });
+  gateObserver.observe(docEl, { attributes: true, attributeFilter: ["class"] });
   cleanups.push(() => gateObserver.disconnect());
   listen(document, "visibilitychange", () => {
     if (document.visibilityState === "visible" && ui.open && !busy && !placing) void refresh().then(render);
@@ -875,6 +833,9 @@ export function mountInto(host: HTMLElement, opts: MountOptions): () => void {
     destroyed = true;
     if (raf) cancelAnimationFrame(raf);
     for (const undo of cleanups.splice(0)) undo();
+    litRender(nothing, panel);
+    litRender(nothing, toolbar);
+    litRender(nothing, bar);
     root.replaceChildren();
     host.hidden = false;
   };

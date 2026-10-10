@@ -312,7 +312,7 @@ try {
   await attach(m);
   await toList(m);
   await m.locator("preview-feedback .tab", { hasText: "All pages" }).click();
-  const heads = await m.locator("preview-feedback .group h3").evaluateAll((els) => els.map((e) => e.firstChild.textContent.trim()));
+  const heads = await m.locator("preview-feedback .group h3").evaluateAll((els) => els.map((e) => [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").trim()));
   check(heads.join(",") === "Home,Services,FAQ", `pages listed in nav order (got ${heads.join(" | ")})`);
   check((await m.locator("preview-feedback .here").count()) === 1, "current page is marked");
   const openAll = await m.locator("preview-feedback .tab").nth(1).innerText();
@@ -452,7 +452,7 @@ try {
   await dp.evaluate(() => { document.body.append(document.createElement("preview-feedback")); });
   await wait(150);
   check(warns.some((w) => /already on this page/.test(w)) || warns.some((w) => /needs endpoint/.test(w)), `a second element is refused with a console warning (${warns.at(-1) ?? "none"})`);
-  check(await dp.evaluate(() => [...document.querySelectorAll("preview-feedback")].filter((e) => e.shadowRoot && e.shadowRoot.childElementCount > 0).length === 1), "so only one widget is ever drawn");
+  check(await dp.evaluate(() => [...document.querySelectorAll("preview-feedback")].filter((e) => (e.shadowRoot?.querySelector("#fb")?.childElementCount ?? 0) > 0).length === 1), "so only one widget is ever drawn");
   await dp.evaluate(() => { document.querySelector("preview-feedback").remove(); const e = document.createElement("preview-feedback"); e.setAttribute("endpoint", "http://x"); document.body.append(e); });
   await wait(150);
   check(warns.some((w) => /needs endpoint, slug and site-key/.test(w)), "an element missing attributes says what it needs and mounts nothing");
