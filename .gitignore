@@ -6,6 +6,7 @@ node_modules/
 .wrangler/
 # Generated: the built widget the Worker serves at /v1/widget.js
 apps/api/public/v1/
+apps/api/public/studio/
 packages/widget/dist/
 # Scratch output (screenshots from the browser check)
 /.work/

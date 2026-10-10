@@ -1,0 +1,24 @@
+{
+  "name": "@preview-feedback/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The self-hosted dashboard: every site's threads in one place, served by the Worker at /studio/. Reads the admin API with your admin token.",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p .",
+    "test": "vitest run",
+    "e2e": "node e2e/run.mjs"
+  },
+  "dependencies": {
+    "@preview-feedback/widget": "workspace:*",
+    "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "happy-dom": "^20.14.5",
+    "playwright-core": "^1.63.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

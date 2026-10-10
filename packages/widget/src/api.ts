@@ -13,6 +13,7 @@ export interface Comment {
   anchor_dy: number | null;
   viewport_w: number;
   viewport_h: number;
+  build: string;
   status: "open" | "resolved";
   resolved_at: string | null;
   resolved_by: string | null;

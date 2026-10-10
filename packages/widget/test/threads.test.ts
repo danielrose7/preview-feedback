@@ -7,7 +7,7 @@ import { DEFAULT_TOOLBAR, loadToolbar, loadUi, saveToolbar, saveUi, setPending, 
 let id = 0;
 const c = (over: Partial<Comment> = {}): Comment => ({
   id: ++id, created_at: "2026-10-09T20:00:00Z", parent_id: null, author: "Molly", body: "b", page: "/", page_title: "Home",
-  anchor_id: null, anchor_path: null, anchor_text: null, anchor_dx: null, anchor_dy: null, viewport_w: 390, viewport_h: 800, status: "open",
+  anchor_id: null, anchor_path: null, anchor_text: null, anchor_dx: null, anchor_dy: null, viewport_w: 390, viewport_h: 800, build: "b1", status: "open",
   resolved_at: null, resolved_by: null, resolution_note: null, reopened_at: null, reopened_by: null, ...over,
 });
 

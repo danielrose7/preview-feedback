@@ -1,11 +1,13 @@
 import { FeedbackSite } from "./site";
+import { Registry } from "./registry";
 import type { Fail } from "./site";
-import { MAX_BODY_BYTES, originAllowed, parseComment, parseName, parseNote, validSlug } from "./validate";
+import { MAX_BODY_BYTES, originAllowed, parseComment, parseName, parseNote, parsePreviewUrl, validSlug } from "./validate";
 
-export { FeedbackSite };
+export { FeedbackSite, Registry };
 
 interface Env {
   FEEDBACK_SITE: DurableObjectNamespace<FeedbackSite>;
+  REGISTRY: DurableObjectNamespace<Registry>;
   ALLOWED_ORIGINS: string;
   ADMIN_TOKEN?: string;
 }
@@ -140,16 +142,39 @@ export default {
       return json({ error: "method not allowed" }, 405, cors);
     }
 
-    // Admin routes (no CORS: used from the CLI, not the browser).
+    // Admin routes. No CORS: the CLI and the dashboard (served from this same origin) are the only callers.
+    const registry = env.REGISTRY.get(env.REGISTRY.idFromName("registry"));
+    if (parts[0] === "admin" && parts[1] === "sites" && parts.length === 2 && req.method === "GET") {
+      if (!isAdmin(req, env)) return json({ error: "unauthorized" }, 401, {});
+      const sites = await Promise.all((await registry.all()).map(async (r) => ({
+        ...r,
+        ...(await env.FEEDBACK_SITE.get(env.FEEDBACK_SITE.idFromName(r.slug)).summary()),
+      })));
+      return json({ sites }, 200, {});
+    }
     if (parts[0] === "admin" && parts[1] === "sites" && parts[2]) {
       if (!isAdmin(req, env)) return json({ error: "unauthorized" }, 401, {});
       const slug = parts[2];
       if (!validSlug(slug)) return json({ error: "bad slug" }, 400, {});
       const stub = env.FEEDBACK_SITE.get(env.FEEDBACK_SITE.idFromName(slug));
 
-      // POST /admin/sites/:slug -> register or rotate the site key
+      // POST /admin/sites/:slug -> register or rotate the site key; an optional {previewUrl} is remembered
       if (parts.length === 3 && req.method === "POST") {
-        return json({ slug, siteKey: await stub.register() }, 200, {});
+        const body = await readJson(req);
+        if (!body.ok) return body.res;
+        const previewUrl = parsePreviewUrl(((body.value ?? {}) as Record<string, unknown>).previewUrl);
+        if (previewUrl === null) return json({ error: "previewUrl must be an http(s) URL" }, 400, {});
+        const siteKey = await stub.register();
+        await registry.upsert(slug, previewUrl ?? null);
+        return json({ slug, siteKey }, 200, {});
+      }
+      // PUT /admin/sites/:slug -> set (or clear, with "") the preview URL without touching the key
+      if (parts.length === 3 && req.method === "PUT") {
+        const body = await readJson(req);
+        if (!body.ok) return body.res;
+        const previewUrl = parsePreviewUrl(((body.value ?? {}) as Record<string, unknown>).previewUrl);
+        if (previewUrl === undefined || previewUrl === null) return json({ error: "previewUrl must be an http(s) URL, or empty to clear" }, 400, {});
+        return json({ site: await registry.upsert(slug, previewUrl) }, 200, {});
       }
       // POST /admin/sites/:slug/comments -> reply as the admin (author defaults to "Daniel")
       if (parts.length === 4 && parts[3] === "comments" && req.method === "POST") {
@@ -168,8 +193,9 @@ export default {
         if (!Number.isInteger(id) || id < 1) return json({ error: "bad id" }, 400, {});
         const body = await readJson(req);
         if (!body.ok) return body.res;
-        const note = parseNote(((body.value ?? {}) as Record<string, unknown>).note);
-        const res = parts[5] === "resolve" ? await stub.resolveAsAdmin(id, note) : await stub.reopenAsAdmin(id);
+        const b = (body.value ?? {}) as Record<string, unknown>;
+        const by = parseName(b.by) ?? "admin";
+        const res = parts[5] === "resolve" ? await stub.resolveAsAdmin(id, parseNote(b.note), by) : await stub.reopenAsAdmin(id, by);
         return res.ok ? json({ comment: res.comment }, 200, {}) : refuse(res.reason, {});
       }
       // GET /admin/sites/:slug/export

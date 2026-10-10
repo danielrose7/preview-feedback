@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// pnpm feedback register <slug>          create (or rotate) the site key, print it once
+// pnpm feedback sites                    list registered sites with open and resolved counts
+// pnpm feedback register <slug> [--preview-url URL]  create (or rotate) the site key, print it once
+// pnpm feedback preview-url <slug> <URL|"">          set or clear where the preview lives (the dashboard links to it)
 // pnpm feedback pull <slug> [--open] [--out file]   export to .work/feedback/<slug>.json and summarise threads
 // pnpm feedback reply <slug> <id> <text> [--as Name]  reply to a thread (default author: Daniel)
 // pnpm feedback resolve <slug> <id> [note]           resolve a thread, with an optional note
@@ -61,13 +63,26 @@ function summarise(slug, comments, onlyOpen) {
 }
 
 const [cmd, slug, ...rest] = process.argv.slice(2);
-if (!cmd || !slug) die("usage: pnpm feedback <register|pull|reply|resolve|reopen|delete> <slug> [...]");
+if (cmd === "sites") {
+  const { sites } = await call("/admin/sites");
+  if (!sites.length) console.log("No sites registered yet.");
+  for (const s of sites) console.log(`${s.slug.padEnd(28)} ${String(s.open).padStart(3)} open  ${String(s.resolved).padStart(3)} resolved  ${s.preview_url ?? "(no preview URL)"}`);
+  process.exit(0);
+}
+if (!cmd || !slug) die("usage: pnpm feedback <sites|register|preview-url|pull|reply|resolve|reopen|delete> <slug> [...]");
 
 if (cmd === "register") {
-  const { siteKey } = await call(`/admin/sites/${slug}`, { method: "POST" });
+  const at = rest.indexOf("--preview-url");
+  const previewUrl = at >= 0 ? rest[at + 1] ?? die("--preview-url needs a URL") : undefined;
+  const { siteKey } = await call(`/admin/sites/${slug}`, { method: "POST", body: JSON.stringify(previewUrl ? { previewUrl } : {}) });
   console.log(`Site key for ${slug} (shown once; registering again rotates it and revokes this one):\n`);
   console.log(`  FEEDBACK_KEY=${siteKey}\n`);
   console.log(`Build the preview with FEEDBACK_KEY set and FEEDBACK_ENDPOINT=${endpoint}.`);
+} else if (cmd === "preview-url") {
+  const url = rest[0];
+  if (url === undefined) die('usage: pnpm feedback preview-url <slug> <URL|"">');
+  const { site } = await call(`/admin/sites/${slug}`, { method: "PUT", body: JSON.stringify({ previewUrl: url }) });
+  console.log(site.preview_url ? `Preview URL for ${slug}: ${site.preview_url}` : `Cleared the preview URL for ${slug}.`);
 } else if (cmd === "pull") {
   const i = rest.indexOf("--out");
   const out = i >= 0 ? resolve(cwd, rest[i + 1] ?? die("--out needs a path")) : resolve(repoRoot, ".work/feedback", `${slug}.json`);

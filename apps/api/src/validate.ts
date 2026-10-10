@@ -113,3 +113,18 @@ export function parseName(v: unknown): string | null {
 export function parseNote(v: unknown): string | null {
   return typeof v === "string" && v.trim() ? v.trim().slice(0, 500) : null;
 }
+
+/** A preview URL the dashboard will link to: http(s) only, no credentials or fragment, trailing slash trimmed. "" clears it. */
+export function parsePreviewUrl(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null || v === "") return "";
+  if (typeof v !== "string" || v.length > 300) return null;
+  try {
+    const u = new URL(v);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    if (u.username || u.password) return null;
+    return `${u.origin}${u.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return null;
+  }
+}

@@ -571,6 +571,7 @@ try {
   const ptb = await p.locator("preview-feedback .toolbar").boundingBox();
   check(ptb && ptb.x >= 0 && ptb.x + ptb.width <= 390, `toolbar fits the screen (${Math.round(ptb.width)}px wide)`);
   check(!(await p.locator("preview-feedback .tb .lbl").first().isVisible()), "toolbar labels collapse to icons");
+  await pins(p).first().waitFor({ state: "attached", timeout: 5000 }).catch(() => {}); // the first fetch and layout take a moment
   check((await pins(p).count()) >= 1, "pins are drawn on the phone too");
   await p.locator("preview-feedback .tb-inbox").tap();
   const box = await p.locator("preview-feedback .panel").boundingBox();

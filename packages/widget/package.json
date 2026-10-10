@@ -7,7 +7,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./element": "./src/element.ts",
-    "./anchor": "./src/anchor.ts"
+    "./anchor": "./src/anchor.ts",
+    "./api": "./src/api.ts",
+    "./threads": "./src/threads.ts"
   },
   "scripts": {
     "test": "vitest run",

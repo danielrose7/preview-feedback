@@ -174,3 +174,53 @@ describe("admin", () => {
 it("has the binding", () => {
   expect((env as unknown as Record<string, unknown>).FEEDBACK_SITE).toBeDefined();
 });
+
+describe("dashboard admin routes", () => {
+  const get = (path: string, headers: Record<string, string> = admin) => call(path, { headers });
+
+  it("lists registered sites with counts, and refuses without the admin token", async () => {
+    const key = await register();
+    await post(key, comment());
+    const second = await post(key, comment({ body: "second" }));
+    const id = ((await second.json()) as { comment: { id: number } }).comment.id;
+    await call(`/admin/sites/${slug}/threads/${id}/resolve`, { method: "POST", headers: admin, body: JSON.stringify({ by: "Daniel", note: "done" }) });
+
+    expect((await get("/admin/sites", {})).status).toBe(401);
+    const res = await get("/admin/sites");
+    expect(res.status).toBe(200);
+    const mine = ((await res.json()) as { sites: { slug: string; open: number; resolved: number; comments: number; last_activity: string | null }[] }).sites.find((s) => s.slug === slug);
+    expect(mine).toMatchObject({ open: 1, resolved: 1, comments: 2 });
+    expect(mine!.last_activity).toBeTruthy();
+  });
+
+  it("remembers a preview URL on register, changes it without rotating the key, and clears it", async () => {
+    const reg = await call(`/admin/sites/${slug}`, { method: "POST", headers: admin, body: JSON.stringify({ previewUrl: "https://molly.preview.example.com/" }) });
+    const key = ((await reg.json()) as { siteKey: string }).siteKey;
+    const find = async () => ((await (await get("/admin/sites")).json()) as { sites: { slug: string; preview_url: string | null }[] }).sites.find((s) => s.slug === slug)!;
+    expect((await find()).preview_url).toBe("https://molly.preview.example.com");
+
+    const put = await call(`/admin/sites/${slug}`, { method: "PUT", headers: admin, body: JSON.stringify({ previewUrl: "http://localhost:4322/molly/" }) });
+    expect(put.status).toBe(200);
+    expect((await find()).preview_url).toBe("http://localhost:4322/molly");
+    expect((await list(key)).status).toBe(200); // the key still works
+
+    await call(`/admin/sites/${slug}`, { method: "PUT", headers: admin, body: JSON.stringify({ previewUrl: "" }) });
+    expect((await find()).preview_url).toBeNull();
+  });
+
+  it("refuses preview URLs that are not plain http(s)", async () => {
+    for (const bad of ["javascript:alert(1)", "https://user:pw@example.com", "not a url", 5]) {
+      const res = await call(`/admin/sites/${slug}`, { method: "PUT", headers: admin, body: JSON.stringify({ previewUrl: bad }) });
+      expect(res.status, String(bad)).toBe(400);
+    }
+  });
+
+  it("records who resolved and reopened when the dashboard names itself", async () => {
+    const key = await register();
+    const id = ((await (await post(key, comment())).json()) as { comment: { id: number } }).comment.id;
+    const r = await call(`/admin/sites/${slug}/threads/${id}/resolve`, { method: "POST", headers: admin, body: JSON.stringify({ by: "Daniel", note: "Fees page added" }) });
+    expect(((await r.json()) as { comment: { resolved_by: string; resolution_note: string } }).comment).toMatchObject({ resolved_by: "Daniel", resolution_note: "Fees page added" });
+    const o = await call(`/admin/sites/${slug}/threads/${id}/reopen`, { method: "POST", headers: admin, body: "{}" });
+    expect(((await o.json()) as { comment: { reopened_by: string } }).comment.reopened_by).toBe("admin");
+  });
+});

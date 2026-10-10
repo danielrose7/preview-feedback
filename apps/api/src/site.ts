@@ -36,6 +36,13 @@ const COLUMNS = `id, created_at, parent_id, author, body, page, page_title, anch
   anchor_text, anchor_dx, anchor_dy, viewport_w, viewport_h, scroll_y, build, user_agent, status, resolved_at, resolved_by,
   resolution_note, reopened_at, reopened_by`;
 
+export interface SiteSummary {
+  open: number;
+  resolved: number;
+  comments: number;
+  last_activity: string | null;
+}
+
 export type Fail = "unregistered" | "key" | "rate" | "cap" | "no_parent" | "reply_to_reply" | "resolved";
 export type AddResult = { ok: true; comment: CommentRow } | { ok: false; reason: Fail };
 export type ThreadResult = { ok: true; comment: CommentRow } | { ok: false; reason: "unregistered" | "key" | "not_found" };
@@ -219,12 +226,25 @@ export class FeedbackSite extends DurableObject {
     return this.setStatus(id, "open", by, null);
   }
 
-  async resolveAsAdmin(id: number, note: string | null): Promise<ThreadResult> {
-    return this.setStatus(id, "resolved", "admin", note);
+  async resolveAsAdmin(id: number, note: string | null, by = "admin"): Promise<ThreadResult> {
+    return this.setStatus(id, "resolved", by, note);
   }
 
-  async reopenAsAdmin(id: number): Promise<ThreadResult> {
-    return this.setStatus(id, "open", "admin", null);
+  async reopenAsAdmin(id: number, by = "admin"): Promise<ThreadResult> {
+    return this.setStatus(id, "open", by, null);
+  }
+
+  /** Counts for the dashboard's site list. Threads are root comments. */
+  async summary(): Promise<SiteSummary> {
+    const sql = this.ctx.storage.sql;
+    const n = (q: string) => Number(sql.exec(q).toArray()[0]?.n ?? 0);
+    const last = sql.exec("SELECT MAX(created_at) AS at FROM comments").toArray()[0]?.at as string | null | undefined;
+    return {
+      open: n("SELECT COUNT(*) AS n FROM comments WHERE parent_id IS NULL AND status = 'open'"),
+      resolved: n("SELECT COUNT(*) AS n FROM comments WHERE parent_id IS NULL AND status = 'resolved'"),
+      comments: n("SELECT COUNT(*) AS n FROM comments"),
+      last_activity: last ?? null,
+    };
   }
 
   /** Hard delete. Allowed only when every message in the thread is by `author`. */

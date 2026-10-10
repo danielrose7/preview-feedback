@@ -17,7 +17,7 @@ What exists is described in `README.md`. This is what we do next and the ideas b
    pointing at the Worker; its copies of the widget and API are deleted. A site built without feedback
    config has no trace of the widget (no element, no script, no leftover file).
 2. **Deploy** to workers.dev with a real admin token and the allowed-origin list, then try it on a phone.
-3. **Lit, in steps.** Convert the toolbar, then the inbox rows and thread view, then compose, then the
+3. ~~**Lit, in steps.**~~ Done: `<preview-feedback>` is a `LitElement` and every view is a lit-html template; the 122 browser checks pass unchanged apart from two that read Lit's marker comments. Original plan: Convert the toolbar, then the inbox rows and thread view, then compose, then the
    root element, keeping `mount()` and `<preview-feedback>` as they are. Done when the 122 browser checks
    pass unchanged. Reasons: the hand-written render-and-restore-focus code caused real bugs, and Lit
    gives lifecycle and composition for about 5 KB. (TypeScript needs `useDefineForClassFields: false`.)
@@ -26,7 +26,7 @@ What exists is described in `README.md`. This is what we do next and the ideas b
 
 ## Then
 
-- **Studio-style dashboard.** All sites and threads in one place: filters (open, resolved, page, width),
+- ~~**Studio-style dashboard.**~~ Built: `apps/dashboard`, served at `/studio/` by the same Worker (46 browser checks). Remaining ideas: live updates, keyboard navigation, bulk resolve, a dark theme, per-agent tokens. Original plan: All sites and threads in one place: filters (open, resolved, page, width),
   an Open on preview link that lands on the exact pin, reply and resolve with a note. Reads the same API.
   Open question: a standalone app in this repo, or a page in the goji-sites studio.
 - **API v1 for the dashboard and agents.** A versioned OpenAPI file; `--json` and `--since <id>` on every
