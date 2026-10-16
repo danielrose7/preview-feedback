@@ -1,0 +1,17 @@
+---
+import Page from "../layouts/Page.astro";
+---
+<Page title="Contact" description="Ask for a quote or ask a question.">
+  <section data-section="contact-hero"><div class="wrap">
+    <h1>Talk to us</h1>
+    <p class="lede">We answer within one business day.</p>
+  </div></section>
+  <section data-section="contact-form"><div class="wrap">
+    <form action="#" onsubmit="return false">
+      <label for="n">Name</label><input id="n" name="name" />
+      <label for="e">Email</label><input id="e" name="email" type="email" />
+      <label for="m">What do you need?</label><textarea id="m" name="message" rows="5"></textarea>
+      <p><button class="btn" type="submit">Send</button></p>
+    </form>
+  </div></section>
+</Page>

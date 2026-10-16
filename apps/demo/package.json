@@ -1,0 +1,21 @@
+{
+  "name": "@preview-feedback/demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A fake company site (Acme) for trying the feedback widget: pages with data-section blocks, and the widget only when FEEDBACK_KEY is set.",
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check",
+    "test": "node scripts/check.mjs"
+  },
+  "dependencies": {
+    "astro": "^7.3.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^6.0.0"
+  }
+}

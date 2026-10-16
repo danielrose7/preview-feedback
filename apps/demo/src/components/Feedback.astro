@@ -1,0 +1,11 @@
+---
+import { feedback, nav } from "../site";
+const build = process.env.BUILD_ID ?? new Date().toISOString().slice(0, 16);
+const pages = [...new Set(nav.map((n) => n.href))];
+---
+{feedback && (
+  <>
+    <preview-feedback endpoint={feedback.endpoint} slug={feedback.slug} site-key={feedback.siteKey} build={build} pages={JSON.stringify(pages)}></preview-feedback>
+    <script is:inline src={`${feedback.endpoint}/v1/widget.js`} defer></script>
+  </>
+)}
