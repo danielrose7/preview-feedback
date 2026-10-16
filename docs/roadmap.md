@@ -21,7 +21,9 @@ What exists is described in `README.md`. This is what we do next and the ideas b
 1. ~~**Cut goji-sites over.**~~ Done: goji-sites `base` 0.15.0 emits `<preview-feedback>` and a script tag
    pointing at the Worker; its copies of the widget and API are deleted. A site built without feedback
    config has no trace of the widget (no element, no script, no leftover file).
-2. **Deploy** to workers.dev with a real admin token and the allowed-origin list, then try it on a phone.
+2. **Deploy**: done, at https://preview-feedback.danielrose7.workers.dev with a real admin token and
+   `ALLOWED_ORIGINS` set to localhost and `https://*.pages.dev`. Still to do: try it on a phone, and tighten
+   the origin list to the previews actually in use.
 3. ~~**Lit, in steps.**~~ Done: `<preview-feedback>` is a `LitElement` and every view is a lit-html template; the 122 browser checks pass unchanged apart from two that read Lit's marker comments. Original plan: Convert the toolbar, then the inbox rows and thread view, then compose, then the
    root element, keeping `mount()` and `<preview-feedback>` as they are. Done when the 122 browser checks
    pass unchanged. Reasons: the hand-written render-and-restore-focus code caused real bugs, and Lit

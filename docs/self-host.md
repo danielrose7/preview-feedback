@@ -13,7 +13,8 @@ One Cloudflare Worker with two Durable Object classes and static assets. The fre
 git clone https://github.com/danielrose7/preview-feedback
 cd preview-feedback
 pnpm install
-pnpm build                                   # builds the widget, dashboard and docs
+DOCS_SITE=https://YOUR-WORKER.workers.dev pnpm build   # widget, dashboard and docs; DOCS_SITE sets the
+                                                       # absolute URLs in llms.txt and the sitemap
 cd apps/api
 pnpm exec wrangler login
 pnpm exec wrangler secret put ADMIN_TOKEN    # a long random string
@@ -28,7 +29,8 @@ Edit `ALLOWED_ORIGINS` in `apps/api/wrangler.jsonc` to your preview origins, com
 pnpm run deploy
 ```
 
-Wrangler prints the Worker's address. That is your **endpoint**; the widget is at `/v1/widget.js`, the
+Wrangler prints the Worker's address. If you did not know it when you built, set `DOCS_SITE` to it,
+rebuild and deploy again so `llms.txt` points at the right place. That is your **endpoint**; the widget is at `/v1/widget.js`, the
 dashboard at `/studio/`, and these docs at `/docs/`.
 
 ## First site

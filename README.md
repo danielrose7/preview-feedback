@@ -128,5 +128,6 @@ The browser check needs Google Chrome installed (it drives the system browser th
 
 ## Status
 
-Local only. Not deployed yet; see [docs/roadmap.md](docs/roadmap.md). Started inside
+Deployed at https://preview-feedback.danielrose7.workers.dev (docs at `/docs/`, dashboard at `/studio/`).
+Not yet tried on a phone or by a second site; see [docs/roadmap.md](docs/roadmap.md). Started inside
 `goji-sites` (see [docs/origin-plan.md](docs/origin-plan.md) for the build history and decisions).
