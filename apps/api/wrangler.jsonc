@@ -16,7 +16,7 @@
     { "tag": "v2", "new_sqlite_classes": ["Registry"] }
   ],
   "vars": {
-    // Comma-separated origins; `*` matches within one host label or a port. Set the real preview
+    // Comma-separated origins; `*` matches any run of characters except `/` (dots included; see docs/self-host.md). Set the real preview
     // origins at deploy time. ADMIN_TOKEN is a secret (`wrangler secret put ADMIN_TOKEN`), not a var.
     "ALLOWED_ORIGINS": "http://localhost:*,http://127.0.0.1:*"
   }

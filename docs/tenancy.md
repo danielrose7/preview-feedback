@@ -1,3 +1,8 @@
+---
+title: Tenancy
+description: Design for keeping each agency's data separate on one Worker (not built yet)
+---
+
 # Tenancy: keeping each agency's data separate
 
 Status: design, not built. Decide before a second agency uses this; cheap to do now, costly after data

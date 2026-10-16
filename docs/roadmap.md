@@ -1,3 +1,8 @@
+---
+title: Roadmap
+description: What is done, what is next, and the ideas behind it
+---
+
 # Roadmap
 
 What exists is described in `README.md`. This is what we do next and the ideas behind it, in order.
@@ -8,7 +13,7 @@ What exists is described in `README.md`. This is what we do next and the ideas b
   itself, served by the Worker as one script and also importable.
 - Pins, threads, replies, resolve and reopen, author-only delete, an inbox across pages, deep links,
   scroll-to-pin, and a toolbar that drags anywhere, folds to a bubble and stands up at side edges.
-- The Worker with a Durable Object per site, the admin CLI, and 235 automated checks.
+- The Worker with a Durable Object per site, the admin CLI, and automated checks (unit, Worker and real-browser suites; the counts are in the README).
 - goji-sites consumes it through a script tag: `base` has no dependency on this repo's code.
 
 ## Next
@@ -26,6 +31,7 @@ What exists is described in `README.md`. This is what we do next and the ideas b
 
 ## Then
 
+- **Docs site**: done, at `/docs/` on the Worker (`apps/docs`, 36 browser checks), with `llms.txt`, `llms-full.txt`, markdown twins and an agent setup prompt. Set `DOCS_SITE` when building for a deployment so the absolute URLs in them are real.
 - ~~**Studio-style dashboard.**~~ Built: `apps/dashboard`, served at `/studio/` by the same Worker (46 browser checks). Remaining ideas: live updates, keyboard navigation, bulk resolve, a dark theme, per-agent tokens. Original plan: All sites and threads in one place: filters (open, resolved, page, width),
   an Open on preview link that lands on the exact pin, reply and resolve with a note. Reads the same API.
   Open question: a standalone app in this repo, or a page in the goji-sites studio.

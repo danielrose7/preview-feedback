@@ -4,3 +4,7 @@
   X-Robots-Tag: noindex, nofollow
   X-Content-Type-Options: nosniff
   Cache-Control: no-cache
+
+/docs/*
+  Cache-Control: public, max-age=300
+  X-Content-Type-Options: nosniff

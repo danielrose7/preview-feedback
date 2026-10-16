@@ -10,3 +10,10 @@ apps/api/public/studio/
 packages/widget/dist/
 # Scratch output (screenshots from the browser check)
 /.work/
+apps/api/public/docs/
+apps/api/public/llms.txt
+apps/api/public/llms-full.txt
+apps/api/public/sitemap.xml
+apps/api/public/agent-setup/
+apps/demo/dist/
+apps/demo/.astro/

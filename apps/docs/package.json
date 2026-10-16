@@ -1,0 +1,20 @@
+{
+  "name": "@preview-feedback/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Renders docs/*.md into the Worker's static assets at /docs/, plus llms.txt, llms-full.txt, a sitemap and the agent setup prompt.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run",
+    "typecheck": "echo 'docs: nothing to typecheck'",
+    "e2e": "node e2e/run.mjs"
+  },
+  "dependencies": {
+    "marked": "^16.4.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0",
+    "vitest": "^4.1.11"
+  }
+}

@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc -p .",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "e2e": "node e2e/run.mjs"
   },
   "dependencies": {

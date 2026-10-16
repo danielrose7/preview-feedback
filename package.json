@@ -4,11 +4,11 @@
   "packageManager": "pnpm@11.25.0",
   "description": "Honor-system feedback for private website previews: pins, threads and resolve, no accounts, no extension.",
   "scripts": {
-    "build": "pnpm --filter @preview-feedback/widget build && pnpm --filter @preview-feedback/dashboard build",
+    "build": "pnpm --filter @preview-feedback/widget build && pnpm --filter @preview-feedback/dashboard build && pnpm --filter @preview-feedback/docs build",
     "dev": "pnpm build && pnpm --filter @preview-feedback/api dev",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "e2e": "pnpm build && pnpm --filter @preview-feedback/widget e2e && pnpm --filter @preview-feedback/dashboard e2e",
+    "e2e": "pnpm build && pnpm --filter @preview-feedback/widget e2e && pnpm --filter @preview-feedback/dashboard e2e && pnpm --filter @preview-feedback/docs e2e",
     "feedback": "pnpm --filter @preview-feedback/api cli"
   }
 }
