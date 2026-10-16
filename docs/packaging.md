@@ -121,8 +121,8 @@ pnpm --filter @your-scope/preview-feedback publish
 ```
 
 Check the tarball with `pnpm pack` and open it: it should hold `dist/` and nothing else. A published
-package is public and cannot be fully unpublished, so decide the name and licence before the first
-release. The repository has no licence file yet.
+package is public and cannot be fully unpublished, so decide the name before the first release. The
+repository is MIT licensed (`LICENSE`), which `files` should ship.
 
 ## Versioning against the Worker
 
