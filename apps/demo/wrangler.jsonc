@@ -1,0 +1,9 @@
+{
+  // The Acme demo as a Worker serving static assets. Deploy with the feedback site key in the build:
+  //   FEEDBACK_KEY=… FEEDBACK_ENDPOINT=https://… pnpm --filter @preview-feedback/demo build
+  //   pnpm --filter @preview-feedback/api exec wrangler deploy --config ../demo/wrangler.jsonc
+  "$schema": "../api/node_modules/wrangler/config-schema.json",
+  "name": "preview-feedback-acme-demo",
+  "compatibility_date": "2026-08-01",
+  "assets": { "directory": "./dist" }
+}

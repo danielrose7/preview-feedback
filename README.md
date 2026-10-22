@@ -54,6 +54,9 @@ Then put the snippet above on a page served from `localhost` (the default allowl
 
 ## Try it on the demo site
 
+Live: https://preview-feedback-acme-demo.danielrose7.workers.dev (leave a pin; comments land in the
+`acme-demo` site on the live Worker). To run it yourself:
+
 `apps/demo` is a small Astro site for a fake company, Acme Anvils, with four pages and `data-section`
 blocks so pins anchor readably. It carries the widget only when `FEEDBACK_KEY` is set:
 
@@ -64,7 +67,8 @@ pnpm --filter @preview-feedback/demo preview                        # http://loc
 ```
 
 A build without `FEEDBACK_KEY` has no element and no script. `FEEDBACK_SLUG` overrides the slug
-(`acme-demo`), and `BUILD_ID` stamps each comment with a build.
+(`acme-demo`), and `BUILD_ID` stamps each comment with a build. `apps/demo/wrangler.jsonc` deploys the
+built site as a Worker with static assets; its origin must be in the feedback Worker's `ALLOWED_ORIGINS`.
 
 ## Review the feedback
 
